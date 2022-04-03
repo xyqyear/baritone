@@ -182,6 +182,13 @@ public final class Settings {
     )));
 
     /**
+     * Blocks that Baritone assumes can be instantly mined
+     */
+    public final Setting<List<Block>> assumeInstantMine = new Setting<>(new ArrayList<>(
+            // Leave Empty by Default
+    ));
+
+    /**
      * Blocks that Baritone will attempt to avoid (Used in avoidance)
      */
     public final Setting<List<Block>> blocksToAvoid = new Setting<>(new ArrayList<>(
@@ -193,6 +200,13 @@ public final class Settings {
      */
     public final Setting<List<Block>> blocksToDisallowBreaking = new Setting<>(new ArrayList<>(
         // Leave Empty by Default
+    ));
+
+    /**
+     * Blocks that Baritone is allowed to break, unless in blocksToDisallowBreaking
+     */
+    public final Setting<List<Block>> blocksToAllowBreaking = new Setting<>(new ArrayList<>(
+            // Leave Empty by Default
     ));
 
     /**

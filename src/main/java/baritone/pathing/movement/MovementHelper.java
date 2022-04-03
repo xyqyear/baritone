@@ -59,7 +59,8 @@ public interface MovementHelper extends ActionCosts, Helper {
 
     static boolean avoidBreaking(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
         Block b = state.getBlock();
-        return Baritone.settings().blocksToDisallowBreaking.value.contains(b)
+        return !Baritone.settings().blocksToAllowBreaking.value.contains(b)
+                || Baritone.settings().blocksToDisallowBreaking.value.contains(b)
                 || b == Blocks.ICE // ice becomes water, and water can mess up the path
                 || b instanceof InfestedBlock // obvious reasons
                 // call context.get directly with x,y,z. no need to make 5 new BlockPos for no reason
@@ -400,6 +401,10 @@ public interface MovementHelper extends ActionCosts, Helper {
 
     static double getMiningDurationTicks(CalculationContext context, int x, int y, int z, BlockState state, boolean includeFalling) {
         Block block = state.getBlock();
+        // print block name
+        if (Baritone.settings().assumeInstantMine.value.contains(block)) {
+            return 1.0;
+        }
         if (!canWalkThrough(context.bsi, x, y, z, state)) {
             if (!state.getFluidState().isEmpty()) {
                 return COST_INF;
