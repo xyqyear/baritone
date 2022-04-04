@@ -59,7 +59,8 @@ public interface MovementHelper extends ActionCosts, Helper {
 
     static boolean avoidBreaking(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
         Block b = state.getBlock();
-        return !Baritone.settings().blocksToAllowBreaking.value.contains(b)
+        return !Baritone.settings().blocksToAllowBreaking.value.isEmpty()
+                && !Baritone.settings().blocksToAllowBreaking.value.contains(b)
                 || Baritone.settings().blocksToDisallowBreaking.value.contains(b)
                 || b == Blocks.ICE // ice becomes water, and water can mess up the path
                 || b instanceof InfestedBlock // obvious reasons
