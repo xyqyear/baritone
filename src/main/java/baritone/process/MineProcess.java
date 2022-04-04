@@ -422,7 +422,8 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 })
 
                 .filter(pos -> pos.getY() >= Baritone.settings().minYLevelWhileMining.value + ctx.world.dimensionType().minY())
-
+                .filter(pos -> pos.getY() <= Baritone.settings().maxYLevelWhileMining.value + ctx.world.dimensionType().minY())
+                
                 .filter(pos -> !blacklist.contains(pos))
 
                 .sorted(Comparator.comparingDouble(ctx.getBaritone().getPlayerContext().player().blockPosition()::distSqr))
