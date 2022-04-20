@@ -32,6 +32,8 @@ import baritone.utils.BaritoneProcessHelper;
 import baritone.utils.BlockStateInterface;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -117,12 +119,26 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         if (Baritone.settings().legitMine.value) {
             addNearby();
         }
-        Optional<BlockPos> shaft = curr.stream()
+        Optional<BlockPos> shaft;
+        if (Baritone.settings().allowMoveWhileMining.value) {
+            shaft = curr.stream()
                 .filter(pos -> pos.getX() == ctx.playerFeet().getX() && pos.getZ() == ctx.playerFeet().getZ())
                 .filter(pos -> pos.getY() >= ctx.playerFeet().getY())
                 .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
                 .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
+        } else {
+            shaft = curr.stream()
+                .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
+                .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
+        }
         baritone.getInputOverrideHandler().clearAllKeys();
+        int rightClickEvery = Baritone.settings().rightClickEvery.value;
+        if (rightClickEvery > 0 && tickCount % rightClickEvery == 0) {
+            ctx.player().connection.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND));
+        }
+        if (Baritone.settings().sneakWhileMining.value) {
+            baritone.getInputOverrideHandler().setInputForceState(Input.SNEAK, true);
+        }
         if (shaft.isPresent() && ctx.player().isOnGround()) {
             BlockPos pos = shaft.get();
             BlockState state = baritone.bsi.get0(pos);
@@ -137,6 +153,9 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                     return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
                 }
             }
+        }
+        if (!Baritone.settings().allowMoveWhileMining.value) {
+            return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
         }
         PathingCommand command = updateGoal();
         if (command == null) {

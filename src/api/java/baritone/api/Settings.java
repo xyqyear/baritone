@@ -189,6 +189,21 @@ public final class Settings {
     ));
 
     /**
+     * Right click every x ticks, put 0 for not clicking
+     */
+    public final Setting<Integer> rightClickEvery = new Setting<>(0);
+
+    /**
+     * If turned on, the player won't move while mining
+     */
+    public final Setting<Boolean> allowMoveWhileMining = new Setting<>(true);
+
+    /**
+     * If turned on, the player will sneak while mining
+     */
+    public final Setting<Boolean> sneakWhileMining = new Setting<>(false);
+
+    /**
      * Blocks that Baritone will attempt to avoid (Used in avoidance)
      */
     public final Setting<List<Block>> blocksToAvoid = new Setting<>(new ArrayList<>(
