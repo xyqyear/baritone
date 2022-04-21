@@ -30,6 +30,7 @@ import baritone.pathing.movement.CalculationContext;
 import baritone.pathing.movement.MovementHelper;
 import baritone.utils.BaritoneProcessHelper;
 import baritone.utils.BlockStateInterface;
+import net.minecraft.client.Option;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
@@ -64,6 +65,8 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
     private GoalRunAway branchPointRunaway;
     private int desiredQuantity;
     private int tickCount;
+    private Optional<BlockPos> currentlyMiningBlockPos = Optional.empty();
+    private Optional<Block> currentlyMiningBlockType = Optional.empty();
 
     public MineProcess(Baritone baritone) {
         super(baritone);
@@ -127,9 +130,19 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
                 .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
         } else {
-            shaft = curr.stream()
-                .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
-                .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
+            if (currentlyMiningBlockPos.isPresent() &&
+                    currentlyMiningBlockType.isPresent() &&
+                    BlockStateInterface.get(ctx, currentlyMiningBlockPos.get()).getBlock().equals(currentlyMiningBlockType.get())) {
+                shaft = currentlyMiningBlockPos;
+            } else {
+                shaft = curr.stream()
+                    .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
+                    .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
+                if (shaft.isPresent()) {
+                    currentlyMiningBlockPos = shaft;
+                    currentlyMiningBlockType = Optional.of(BlockStateInterface.get(ctx, shaft.get()).getBlock());
+                }
+            }
         }
         baritone.getInputOverrideHandler().clearAllKeys();
         int rightClickEvery = Baritone.settings().rightClickEvery.value;
@@ -442,7 +455,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
 
                 .filter(pos -> pos.getY() >= Baritone.settings().minYLevelWhileMining.value + ctx.world.dimensionType().minY())
                 .filter(pos -> pos.getY() <= Baritone.settings().maxYLevelWhileMining.value + ctx.world.dimensionType().minY())
-                
+
                 .filter(pos -> !blacklist.contains(pos))
 
                 .sorted(Comparator.comparingDouble(ctx.getBaritone().getPlayerContext().player().blockPosition()::distSqr))
