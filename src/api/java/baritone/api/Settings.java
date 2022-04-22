@@ -205,7 +205,7 @@ public final class Settings {
     public final Setting<Integer> rightClickEvery = new Setting<>(0);
 
     /**
-     * Right click every x ticks, put 0 for not clicking
+     * hold left click while mining
      */
     public final Setting<Boolean> holdLeftClickWhileMining = new Setting<>(false);
 
