@@ -130,13 +130,12 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
         } else {
             if (currentlyMiningBlockPos != null &&
-                    filter.has(BlockStateInterface.get(ctx, currentlyMiningBlockPos).getBlock())) {
+                    filter.has(BlockStateInterface.get(ctx, currentlyMiningBlockPos).getBlock())) { // if the block hasn't finished mining
                 shaft = Optional.of(currentlyMiningBlockPos);
             } else {
                 shaft = curr.stream()
-                    .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
-                    .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
-                shaft.ifPresent(pos -> currentlyMiningBlockPos = pos);
+                    .filter(pos -> filter.has(BlockStateInterface.get(ctx, pos).getBlock())) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
+                    .min(Comparator.comparingDouble(new BlockPos(ctx.playerHead())::distSqr)); // since we are not moving, we compare the distances from player's eyes
             }
         }
         baritone.getInputOverrideHandler().clearAllKeys();
@@ -153,17 +152,22 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
             if (!MovementHelper.avoidBreaking(baritone.bsi, pos.getX(), pos.getY(), pos.getZ(), state)) {
                 Optional<Rotation> rot = RotationUtils.reachable(ctx, pos);
                 if (rot.isPresent() && isSafeToCancel) {
+                    // we only update currentlyMiningBlockPos when the block is reachable
+                    currentlyMiningBlockPos = pos;
                     baritone.getLookBehavior().updateTarget(rot.get(), true);
                     MovementHelper.switchToBestToolFor(ctx, ctx.world().getBlockState(pos));
                     if (ctx.isLookingAt(pos) || ctx.playerRotations().isReallyCloseTo(rot.get())) {
                         baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+                    }
+                    if (!Baritone.settings().allowMoveWhileMining.value) {
+                        return new PathingCommand(new GoalComposite(knownOreLocations.stream().map(loc -> new GoalBlock(loc)).toArray(Goal[]::new)), PathingCommandType.CANCEL_AND_SET_GOAL);
                     }
                     return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
                 }
             }
         }
         if (!Baritone.settings().allowMoveWhileMining.value) {
-            return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+            return new PathingCommand(new GoalComposite(knownOreLocations.stream().map(loc -> new GoalBlock(loc)).toArray(Goal[]::new)), PathingCommandType.CANCEL_AND_SET_GOAL);
         }
         PathingCommand command = updateGoal();
         if (command == null) {
