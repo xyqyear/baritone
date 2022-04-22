@@ -42,7 +42,7 @@ public final class VecUtils {
      * @return The center of the block's bounding box
      * @see #getBlockPosCenter(BlockPos)
      */
-    public static Vec3 calculateBlockC1enter(Level world, BlockPos pos) {
+    public static Vec3 calculateBlockCenter(Level world, BlockPos pos) {
         BlockState b = world.getBlockState(pos);
         VoxelShape shape = b.getCollisionShape(world, pos);
         if (shape.isEmpty()) {
