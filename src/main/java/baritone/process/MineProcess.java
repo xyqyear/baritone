@@ -506,6 +506,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         this.branchPoint = null;
         this.branchPointRunaway = null;
         this.anticipatedDrops = new HashMap<>();
+        this.currentlyMiningBlockPos = null;
         if (filter != null) {
             rescan(new ArrayList<>(), new CalculationContext(baritone));
         }
