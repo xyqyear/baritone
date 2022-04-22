@@ -205,6 +205,11 @@ public final class Settings {
     public final Setting<Integer> rightClickEvery = new Setting<>(0);
 
     /**
+     * Right click every x ticks, put 0 for not clicking
+     */
+    public final Setting<Boolean> holdLeftClickWhileMining = new Setting<>(false);
+
+    /**
      * If turned on, the player won't move while mining
      */
     public final Setting<Boolean> allowMoveWhileMining = new Setting<>(true);

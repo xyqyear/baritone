@@ -143,6 +143,9 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         if (rightClickEvery > 0 && tickCount % rightClickEvery == 0) {
             ctx.player().connection.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND));
         }
+        if (Baritone.settings().holdLeftClickWhileMining.value) {
+            baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+        }
         if (Baritone.settings().sneakWhileMining.value) {
             baritone.getInputOverrideHandler().setInputForceState(Input.SNEAK, true);
         }
