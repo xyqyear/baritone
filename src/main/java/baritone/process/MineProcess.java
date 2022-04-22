@@ -65,8 +65,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
     private GoalRunAway branchPointRunaway;
     private int desiredQuantity;
     private int tickCount;
-    private Optional<BlockPos> currentlyMiningBlockPos = Optional.empty();
-    private Optional<Block> currentlyMiningBlockType = Optional.empty();
+    private BlockPos currentlyMiningBlockPos;
 
     public MineProcess(Baritone baritone) {
         super(baritone);
@@ -130,18 +129,14 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
                 .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
         } else {
-            if (currentlyMiningBlockPos.isPresent() &&
-                    currentlyMiningBlockType.isPresent() &&
-                    BlockStateInterface.get(ctx, currentlyMiningBlockPos.get()).getBlock().equals(currentlyMiningBlockType.get())) {
-                shaft = currentlyMiningBlockPos;
+            if (currentlyMiningBlockPos != null &&
+                    filter.has(BlockStateInterface.get(ctx, currentlyMiningBlockPos).getBlock())) {
+                shaft = Optional.of(currentlyMiningBlockPos);
             } else {
                 shaft = curr.stream()
                     .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
                     .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
-                if (shaft.isPresent()) {
-                    currentlyMiningBlockPos = shaft;
-                    currentlyMiningBlockType = Optional.of(BlockStateInterface.get(ctx, shaft.get()).getBlock());
-                }
+                shaft.ifPresent(pos -> currentlyMiningBlockPos = pos);
             }
         }
         baritone.getInputOverrideHandler().clearAllKeys();
