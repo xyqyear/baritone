@@ -78,6 +78,13 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                     float desiredPitch = Math.round(this.target.getPitch());
                     float difYaw = (desiredYaw - oldYaw) / Math.round(Baritone.settings().smoothAim.value + Math.random());
                     float difPitch = (desiredPitch - oldPitch) / Math.round(Baritone.settings().smoothAim.value + Math.random());
+                    if (Baritone.settings().smoothAim.value > 1f) {
+                        float difAngle = (float) Math.sqrt(difYaw * difYaw + difPitch * difPitch);
+                        float ratio = Baritone.settings().smoothAimAdditionalAngle.value / difAngle;
+                        difYaw += ratio * difYaw;
+                        difPitch += ratio * difPitch;
+                    }
+
                     ctx.player().setYRot((ctx.player().getYRot() + difYaw));
                     ctx.player().setXRot((ctx.player().getXRot() + difPitch));
                     ctx.player().setYRot((float) (ctx.player().getYRot() + (Math.random() - 0.5) * Baritone.settings().randomLooking.value));
