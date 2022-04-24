@@ -87,6 +87,7 @@ public interface IBaritone {
      * @see IGetToBlockProcess
      */
     IGetToBlockProcess getGetToBlockProcess();
+    IMithrilProcess getMithrilProcess();
 
     /**
      * @return The {@link IWorldProvider} instance
