@@ -65,7 +65,8 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
             new Vec3(-83.5, 144, 7.5),
             new Vec3(-94.5, 147, 3.5),
             new Vec3(-125.5, 149, 17.5),
-            new Vec3(-151.5, 149, 43.5)
+            new Vec3(-151.5, 149, 43.5),
+            new Vec3(-124.5, 150, 67.5)
     );
     private final Vec3 MINING_SPOT = new Vec3(-90, 156, 82);
 
