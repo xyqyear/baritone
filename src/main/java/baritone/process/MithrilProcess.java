@@ -29,6 +29,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
     private World world;
     private int waitingTicks = 0;
     private int playerInRangeTick = 0;
+    private int waitingTicksAfterTeleported = 0;
     private String playerInRange;
 
     public MithrilProcess(Baritone baritone) {
@@ -58,10 +59,14 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
     }
 
     private final Vec3 FORGE_POS = new Vec3(0.5, 149, -68.5);
-    private final Vec3 CHECKPOINT1 = new Vec3(-65.5, 139, 11.5);
-    private final Vec3 CHECKPOINT2 = new Vec3(-94.5, 147, 3.5);
-    private final Vec3 CHECKPOINT3 = new Vec3(-125.5, 149, 17.5);
-    private final Vec3 CHECKPOINT4 = new Vec3(-151.5, 149, 43.5);
+    private final List<Vec3> CHECKPOINTS = Arrays.asList(
+            new Vec3(-24.5, 143, -16.5),
+            new Vec3(-65.5, 139, 11.5),
+            new Vec3(-83.5, 144, 7.5),
+            new Vec3(-94.5, 147, 3.5),
+            new Vec3(-125.5, 149, 17.5),
+            new Vec3(-151.5, 149, 43.5)
+    );
     private final Vec3 MINING_SPOT = new Vec3(-90, 156, 82);
 
     @Override
@@ -165,9 +170,25 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
         getWorldFromScoreBoard();
+        // this is for waiting before teleporting
         if (waitingTicks > 0) {
             waitingTicks--;
             return new PathingCommand(null, PathingCommandType.DEFER);
+        }
+        // if the player hasn't teleported yet, wait for a set amount of time
+        // if the player still hasn't teleported yet, try again
+        if (state == State.TELEPORTED_IN_HUB || state == State.TELEPORTED_IN_DWARVEN_MINES || state == State.TELEPORTED_IN_HYPIXEL_LOBBY) {
+            if (waitingTicksAfterTeleported > 0) {
+                waitingTicksAfterTeleported--;
+                if (waitingTicksAfterTeleported == 0) {
+                    logDirect("Teleport timeout, retrying...");
+                    switch (state) {
+                        case TELEPORTED_IN_HUB -> state = State.WAITING_IN_HUB;
+                        case TELEPORTED_IN_DWARVEN_MINES -> state = State.WAITING_IN_DWARVEN_MINES;
+                        case TELEPORTED_IN_HYPIXEL_LOBBY -> state = State.WAITING_IN_HYPIXEL_LOBBY;
+                    }
+                }
+            }
         }
         switch (world) {
             case MAIN_LOBBY, PROTOTYPE_LOBBY -> {
@@ -179,6 +200,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
 
                 if (state == State.WAITING_IN_HYPIXEL_LOBBY) {
                     state = State.TELEPORTED_IN_HYPIXEL_LOBBY;
+                    waitingTicksAfterTeleported = 80;
                     ctx.player().chat("/skyblock");
                 } else if (state != State.TELEPORTED_IN_HYPIXEL_LOBBY) {
                     logDirect("Teleporting in 4 seconds because we're in hypixel lobby");
@@ -196,6 +218,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
 
                 if (state == State.WAITING_IN_HUB) {
                     state = State.TELEPORTED_IN_HUB;
+                    waitingTicksAfterTeleported = 80;
                     ctx.player().chat("/warp forge");
                 } else if (state != State.TELEPORTED_IN_HUB) {
                     logDirect("Teleporting in 4 seconds because we're in other part of skyblock");
@@ -211,6 +234,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
 
                 if (state == State.WAITING_IN_DWARVEN_MINES) {
                     state = State.TELEPORTED_IN_DWARVEN_MINES;
+                    waitingTicksAfterTeleported = 80;
                     ctx.player().chat("/warp hub");
                     return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
                 } else if (state == State.TELEPORTED_IN_DWARVEN_MINES) {
@@ -218,29 +242,33 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                 }
 
                 if (!baritone.getMineProcess().isActive() && !baritone.getCustomGoalProcess().isActive()) {
+                    boolean flag = false;
                     if (ctx.player().position().distanceTo(FORGE_POS) < 1) {
                         checkPlayer();
-                        baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINT1)));
-                    } else if (ctx.player().position().distanceTo(CHECKPOINT1) < 2) {
-                        checkPlayer();
-                        baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINT2)));
-                    } else if (ctx.player().position().distanceTo(CHECKPOINT2) < 2) {
-                        checkPlayer();
-                        baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINT3)));
-                    } else if (ctx.player().position().distanceTo(CHECKPOINT3) < 2) {
-                        checkPlayer();
-                        baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINT4)));
-                    } else if (ctx.player().position().distanceTo(CHECKPOINT4) < 2) {
-                        checkPlayer();
-                        baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(MINING_SPOT)));
-                    } else if (ctx.player().position().distanceTo(MINING_SPOT) < 4) {
+                        baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINTS.get(0))));
+                        flag = true;
+                    }
+                    for (int i = 0; i < CHECKPOINTS.size(); i++) {
+                        if (ctx.player().position().distanceTo(CHECKPOINTS.get(i)) < 2) {
+                            checkPlayer();
+                            if (i == CHECKPOINTS.size() - 1) {
+                                baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(MINING_SPOT)));
+                            } else {
+                                baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINTS.get(i + 1))));
+                            }
+                            flag = true;
+                        }
+                    }
+                    if (ctx.player().position().distanceTo(MINING_SPOT) < 4) {
                         checkPlayer();
                         if (ctx.player().position().distanceTo(MINING_SPOT) < 1) {
                             baritone.getMineProcess().mine(Blocks.LIGHT_BLUE_WOOL, Blocks.POLISHED_DIORITE);
                         } else {
                             baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(MINING_SPOT)));
                         }
-                    } else {
+                        flag = true;
+                    }
+                    if (!flag) {
                         logDirect("Teleporting in 4 seconds because we're in other part of dwarven mines");
                         ctx.player().chat("/warp forge");
                         waitingTicks = 80;
@@ -253,6 +281,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                 } else if (playerInRangeTick > 0) {
                     playerInRangeTick--;
                     if (playerInRangeTick == 0) {
+                        playerInRange = null;
                         logDirect("Player left mining spot");
                     }
                 }
