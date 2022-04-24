@@ -29,7 +29,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
     private World world;
     private int waitingTicks = 0;
     private int playerInRangeTick = 0;
-    private final Map<String, Boolean> playerThatWasInRange = new HashMap<>();
+    private String playerInRange;
 
     public MithrilProcess(Baritone baritone) {
         super(baritone);
@@ -144,9 +144,9 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                             && !entity.getName().getString().matches("^Goblin $")
                             && entity.position().distanceTo(vec) < 8) {
                         String entityName = entity.getName().getString();
-                        if (!playerThatWasInRange.containsKey(entityName)) {
+                        if (playerInRange == null || !playerInRange.equals(entityName)) {
                             logDirect("Player Found: \"" + entityName + "\"");
-                            playerThatWasInRange.put(entityName, true);
+                            playerInRange = entityName;
                         }
                         return true;
                     } else {
@@ -197,7 +197,6 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                 if (state == State.WAITING_IN_HUB) {
                     state = State.TELEPORTED_IN_HUB;
                     ctx.player().chat("/warp forge");
-                    playerThatWasInRange.clear();
                 } else if (state != State.TELEPORTED_IN_HUB) {
                     logDirect("Teleporting in 4 seconds because we're in other part of skyblock");
                     waitingTicks = 80;
