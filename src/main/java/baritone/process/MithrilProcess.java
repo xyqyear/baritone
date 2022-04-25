@@ -46,7 +46,9 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
         WAITING_IN_HUB,
         TELEPORTED_IN_HUB,
         WAITING_IN_DWARVEN_MINES,
-        TELEPORTED_IN_DWARVEN_MINES
+        TELEPORTED_IN_DWARVEN_MINES,
+        PATHING,
+        MINING,
     }
 
     protected enum World {
@@ -66,9 +68,11 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
             new Vec3(-94.5, 147, 3.5),
             new Vec3(-125.5, 149, 17.5),
             new Vec3(-151.5, 149, 43.5),
-            new Vec3(-124.5, 150, 67.5)
+            new Vec3(-124.5, 150, 67.5),
+            new Vec3(-88.5, 156, 82.5)
     );
-    private final Vec3 MINING_SPOT = new Vec3(-90, 156, 82);
+    private final Vec3 MINING_SPOT = new Vec3(-89.5, 156, 82.5);
+    private Vec3 currentPos = null;
 
     @Override
     public double priority() {
@@ -84,6 +88,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
     public void start() {
         waitingTicks = 0;
         playerInRangeTick = 0;
+        currentPos = null;
         this.world = World.UNKNOWN;
         this.state = State.EXECUTING;
     }
@@ -183,11 +188,12 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                 waitingTicksAfterTeleported--;
                 if (waitingTicksAfterTeleported == 0) {
                     logDirect("Teleport timeout, retrying...");
-                    switch (state) {
-                        case TELEPORTED_IN_HUB -> state = State.WAITING_IN_HUB;
-                        case TELEPORTED_IN_DWARVEN_MINES -> state = State.WAITING_IN_DWARVEN_MINES;
-                        case TELEPORTED_IN_HYPIXEL_LOBBY -> state = State.WAITING_IN_HYPIXEL_LOBBY;
-                    }
+                    state = switch (state) {
+                        case TELEPORTED_IN_HUB -> State.WAITING_IN_HUB;
+                        case TELEPORTED_IN_DWARVEN_MINES -> State.WAITING_IN_DWARVEN_MINES;
+                        case TELEPORTED_IN_HYPIXEL_LOBBY -> State.WAITING_IN_HYPIXEL_LOBBY;
+                        default -> state;
+                    };
                 }
             }
         }
@@ -195,104 +201,121 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
             case MAIN_LOBBY, PROTOTYPE_LOBBY -> {
                 baritone.getMineProcess().onLostControl();
                 baritone.getCustomGoalProcess().onLostControl();
-                if (state == State.TELEPORTED_IN_HUB || state == State.TELEPORTED_IN_DWARVEN_MINES) {
-                    state = State.EXECUTING;
-                }
-
-                if (state == State.WAITING_IN_HYPIXEL_LOBBY) {
-                    state = State.TELEPORTED_IN_HYPIXEL_LOBBY;
-                    waitingTicksAfterTeleported = 80;
-                    ctx.player().chat("/skyblock");
-                } else if (state != State.TELEPORTED_IN_HYPIXEL_LOBBY) {
-                    logDirect("Teleporting in 4 seconds because we're in hypixel lobby");
-                    waitingTicks = 80;
-                    state = State.WAITING_IN_HYPIXEL_LOBBY;
+                switch (state) {
+                    // we actually don't need this right now, but i'll add this for good measure
+                    // adding this costs an extra tick, but it keeps state neat
+                    case TELEPORTED_IN_HUB, TELEPORTED_IN_DWARVEN_MINES -> {
+                        state = State.EXECUTING;
+                    }
+                    case WAITING_IN_HYPIXEL_LOBBY -> {
+                        state = State.TELEPORTED_IN_HYPIXEL_LOBBY;
+                        waitingTicksAfterTeleported = 80;
+                        ctx.player().chat("/skyblock");
+                    }
+                    case TELEPORTED_IN_HYPIXEL_LOBBY -> {}
+                    default -> {
+                        logDirect("Teleporting in 4 seconds because we're in hypixel lobby");
+                        waitingTicks = 80;
+                        state = State.WAITING_IN_HYPIXEL_LOBBY;
+                    }
                 }
                 return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
             }
             case SKYBLOCK_HUB, SKYBLOCK_UNKNOWN -> {
                 baritone.getMineProcess().onLostControl();
                 baritone.getCustomGoalProcess().onLostControl();
-                if (state == State.TELEPORTED_IN_HYPIXEL_LOBBY || state == State.TELEPORTED_IN_DWARVEN_MINES) {
-                    state = State.EXECUTING;
-                }
-
-                if (state == State.WAITING_IN_HUB) {
-                    state = State.TELEPORTED_IN_HUB;
-                    waitingTicksAfterTeleported = 80;
-                    ctx.player().chat("/warp forge");
-                } else if (state != State.TELEPORTED_IN_HUB) {
-                    logDirect("Teleporting in 4 seconds because we're in other part of skyblock");
-                    waitingTicks = 80;
-                    state = State.WAITING_IN_HUB;
+                switch (state) {
+                    case TELEPORTED_IN_HYPIXEL_LOBBY, TELEPORTED_IN_DWARVEN_MINES -> {
+                        state = State.EXECUTING;
+                    }
+                    case WAITING_IN_HUB -> {
+                        state = State.TELEPORTED_IN_HUB;
+                        waitingTicksAfterTeleported = 80;
+                        ctx.player().chat("/warp forge");
+                    }
+                    case TELEPORTED_IN_HUB -> {}
+                    default -> {
+                        logDirect("Teleporting in 4 seconds because we're in other part of skyblock");
+                        waitingTicks = 80;
+                        state = State.WAITING_IN_HUB;
+                    }
                 }
                 return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
             }
             case SKYBLOCK_DWARVEN_MINES -> {
-                if (state == State.TELEPORTED_IN_HUB || state == State.TELEPORTED_IN_HYPIXEL_LOBBY) {
-                    state = State.EXECUTING;
-                }
-
-                if (state == State.WAITING_IN_DWARVEN_MINES) {
-                    state = State.TELEPORTED_IN_DWARVEN_MINES;
-                    waitingTicksAfterTeleported = 80;
-                    ctx.player().chat("/warp hub");
-                    return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
-                } else if (state == State.TELEPORTED_IN_DWARVEN_MINES) {
-                    return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
-                }
-
-                if (!baritone.getMineProcess().isActive() && !baritone.getCustomGoalProcess().isActive()) {
-                    boolean flag = false;
-                    if (ctx.player().position().distanceTo(FORGE_POS) < 1) {
-                        checkPlayer();
-                        baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINTS.get(0))));
-                        flag = true;
+                switch (state) {
+                    // we need this here
+                    case TELEPORTED_IN_HUB, TELEPORTED_IN_HYPIXEL_LOBBY -> {
+                        currentPos = FORGE_POS;
+                        state = State.PATHING;
                     }
-                    for (int i = 0; i < CHECKPOINTS.size(); i++) {
-                        if (ctx.player().position().distanceTo(CHECKPOINTS.get(i)) < 2) {
-                            checkPlayer();
-                            if (i == CHECKPOINTS.size() - 1) {
-                                baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(MINING_SPOT)));
-                            } else {
-                                baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINTS.get(i + 1))));
-                            }
-                            flag = true;
-                        }
+                    // if we are waiting for teleportation
+                    case WAITING_IN_DWARVEN_MINES -> {
+                        state = State.TELEPORTED_IN_DWARVEN_MINES;
+                        waitingTicksAfterTeleported = 80;
+                        ctx.player().chat("/warp hub");
+                        return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
                     }
-                    if (ctx.player().position().distanceTo(MINING_SPOT) < 4) {
-                        checkPlayer();
-                        if (ctx.player().position().distanceTo(MINING_SPOT) < 1) {
-                            baritone.getMineProcess().mine(Blocks.LIGHT_BLUE_WOOL, Blocks.POLISHED_DIORITE);
-                        } else {
-                            baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(MINING_SPOT)));
-                        }
-                        flag = true;
+                    // we need this because the default behavior is DEFER,
+                    // but we don't want other processes to control
+                    case TELEPORTED_IN_DWARVEN_MINES -> {
+                        return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
                     }
-                    if (!flag) {
+                    // this only happens if we start in dwarven mines
+                    case EXECUTING -> {
                         logDirect("Teleporting in 4 seconds because we're in other part of dwarven mines");
                         ctx.player().chat("/warp forge");
                         waitingTicks = 80;
+                        currentPos = FORGE_POS;
+                        state = State.PATHING;
                         return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
                     }
-                }
+                    case PATHING -> {
+                        // we only need to change state if neither process is active
+                        if (!baritone.getMineProcess().isActive() && !baritone.getCustomGoalProcess().isActive()) {
+                            checkPlayer();
+                            if (currentPos.equals(FORGE_POS)) {
+                                currentPos = CHECKPOINTS.get(0);
+                                baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINTS.get(0))));
+                            } else if (currentPos.equals(MINING_SPOT)) {
+                                state = State.MINING;
+                                baritone.getMineProcess().mine(Blocks.LIGHT_BLUE_WOOL, Blocks.POLISHED_DIORITE);
+                            } else {
+                                for (int i = 0; i < CHECKPOINTS.size(); i++) {
+                                    if (currentPos.equals(CHECKPOINTS.get(i))) {
+                                        if (i == CHECKPOINTS.size() - 1) {
+                                            currentPos = MINING_SPOT;
+                                            baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(MINING_SPOT)));
 
-                if (getPlayerCountNearBlock(MINING_SPOT) > 0) {
-                    playerInRangeTick++;
-                } else if (playerInRangeTick > 0) {
-                    playerInRangeTick--;
-                    if (playerInRangeTick == 0) {
-                        playerInRange = null;
-                        logDirect("Player left mining spot");
+                                        } else {
+                                            currentPos = CHECKPOINTS.get(i + 1);
+                                            baritone.getCustomGoalProcess().setGoalAndPath(new GoalBlock(new BlockPos(CHECKPOINTS.get(i + 1))));
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
-                }
-                if (playerInRangeTick > 40) {
-                    baritone.getMineProcess().onLostControl();
-                    baritone.getCustomGoalProcess().onLostControl();
-                    state = State.WAITING_IN_DWARVEN_MINES;
-                    logDirect("Teleporting in 5 seconds because of player in range");
-                    waitingTicks = 100;
-                    return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+                    case MINING -> {
+                        if (getPlayerCountNearBlock(MINING_SPOT) > 0) {
+                            playerInRangeTick++;
+                        } else if (playerInRangeTick > 0) {
+                            playerInRangeTick--;
+                            if (playerInRangeTick == 0) {
+                                playerInRange = null;
+                                logDirect("Player left mining spot");
+                            }
+                        }
+                        if (playerInRangeTick > 40) {
+                            baritone.getMineProcess().onLostControl();
+                            baritone.getCustomGoalProcess().onLostControl();
+                            state = State.WAITING_IN_DWARVEN_MINES;
+                            logDirect("Teleporting in 5 seconds because of player in range");
+                            waitingTicks = 100;
+                            return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+                        }
+                    }
                 }
             }
             case UNKNOWN -> {
