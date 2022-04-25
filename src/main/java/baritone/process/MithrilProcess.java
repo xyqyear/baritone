@@ -30,6 +30,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
     private int waitingTicks = 0;
     private int playerInRangeTick = 0;
     private int waitingTicksAfterTeleported = 0;
+    private int worldChangedTicks = 0;
     private String playerInRange;
 
     public MithrilProcess(Baritone baritone) {
@@ -88,6 +89,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
     public void start() {
         waitingTicks = 0;
         playerInRangeTick = 0;
+        worldChangedTicks = 0;
         currentPos = null;
         this.world = World.UNKNOWN;
         this.state = State.EXECUTING;
@@ -103,7 +105,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
         return "Mithril Mining";
     }
 
-    private void getWorldFromScoreBoard() {
+    private World getWorldFromScoreBoard() {
         Scoreboard scoreboard = baritone.getPlayerContext().player().getScoreboard();
         Objective sidebar = baritone.getPlayerContext().player().getScoreboard().getDisplayObjective(1);
         if (sidebar != null) {
@@ -115,8 +117,12 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                     )
                     .reduce("", String::concat);
             switch (gamemode) {
-                case "HYPIXEL" -> world = World.MAIN_LOBBY;
-                case "PROTOTYPE" -> world = World.PROTOTYPE_LOBBY;
+                case "HYPIXEL" -> {
+                    return World.MAIN_LOBBY;
+                }
+                case "PROTOTYPE" -> {
+                    return World.PROTOTYPE_LOBBY;
+                }
                 case "SKYBLOCK CO-OP" -> {
                     Collection<Score> scores = scoreboard.getPlayerScores(sidebar);
                     for (Score score : scores) {
@@ -132,19 +138,17 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                                     )
                                     .reduce("", String::concat);
                             if (line.matches("^ . Village")) {
-                                world = World.SKYBLOCK_HUB;
-                                return;
+                                return World.SKYBLOCK_HUB;
                             } else if (line.matches("^ . (The Forge|Forge Basin|Rampart's Quarry|Far Reserve)$")) {
-                                world = World.SKYBLOCK_DWARVEN_MINES;
-                                return;
+                                return World.SKYBLOCK_DWARVEN_MINES;
                             }
                         }
                     }
-                    world = World.SKYBLOCK_UNKNOWN;
+                    return World.SKYBLOCK_UNKNOWN;
                 }
-                default -> world = World.UNKNOWN;
             }
         }
+        return World.UNKNOWN;
     }
 
     private long getPlayerCountNearBlock(Vec3 vec) {
@@ -175,7 +179,17 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
-        getWorldFromScoreBoard();
+        World worldFromScoreBoard = getWorldFromScoreBoard();
+        // sometimes world would only change for a tick or two
+        if (worldFromScoreBoard != world) {
+            worldChangedTicks++;
+            if (worldChangedTicks > 5) {
+                world = worldFromScoreBoard;
+                worldChangedTicks = 0;
+            }
+        } else {
+            worldChangedTicks = 0;
+        }
         // this is for waiting before teleporting
         if (waitingTicks > 0) {
             waitingTicks--;
@@ -204,9 +218,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                 switch (state) {
                     // we actually don't need this right now, but i'll add this for good measure
                     // adding this costs an extra tick, but it keeps state neat
-                    case TELEPORTED_IN_HUB, TELEPORTED_IN_DWARVEN_MINES -> {
-                        state = State.EXECUTING;
-                    }
+                    case TELEPORTED_IN_HUB, TELEPORTED_IN_DWARVEN_MINES -> state = State.EXECUTING;
                     case WAITING_IN_HYPIXEL_LOBBY -> {
                         state = State.TELEPORTED_IN_HYPIXEL_LOBBY;
                         waitingTicksAfterTeleported = 80;
@@ -225,9 +237,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                 baritone.getMineProcess().onLostControl();
                 baritone.getCustomGoalProcess().onLostControl();
                 switch (state) {
-                    case TELEPORTED_IN_HYPIXEL_LOBBY, TELEPORTED_IN_DWARVEN_MINES -> {
-                        state = State.EXECUTING;
-                    }
+                    case TELEPORTED_IN_HYPIXEL_LOBBY, TELEPORTED_IN_DWARVEN_MINES -> state = State.EXECUTING;
                     case WAITING_IN_HUB -> {
                         state = State.TELEPORTED_IN_HUB;
                         waitingTicksAfterTeleported = 80;
