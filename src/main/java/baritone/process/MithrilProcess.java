@@ -202,6 +202,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                 waitingTicksAfterTeleported--;
                 if (waitingTicksAfterTeleported == 0) {
                     logDirect("Teleport timeout, retrying...");
+                    waitingTicks = 80;
                     state = switch (state) {
                         case TELEPORTED_IN_HUB -> State.WAITING_IN_HUB;
                         case TELEPORTED_IN_DWARVEN_MINES -> State.WAITING_IN_DWARVEN_MINES;
