@@ -5,19 +5,16 @@ import baritone.api.pathing.goals.GoalBlock;
 import baritone.api.process.IMithrilProcess;
 import baritone.api.process.PathingCommand;
 import baritone.api.process.PathingCommandType;
+import baritone.api.utils.HypixelHelper;
 import baritone.utils.BaritoneProcessHelper;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.scores.Objective;
-import net.minecraft.world.scores.PlayerTeam;
-import net.minecraft.world.scores.Score;
-import net.minecraft.world.scores.Scoreboard;
 
 import java.util.*;
-import java.util.stream.Stream;
+
+import static baritone.api.utils.HypixelHelper.getWorldFromScoreBoard;
 
 public final class MithrilProcess extends BaritoneProcessHelper implements IMithrilProcess {
     /**
@@ -26,7 +23,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
      * @see State
      */
     private State state;
-    private World world;
+    private HypixelHelper.World world;
     private int waitingTicks = 0;
     private int playerInRangeTick = 0;
     private int waitingTicksAfterTeleported = 0;
@@ -50,15 +47,6 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
         TELEPORTED_IN_DWARVEN_MINES,
         PATHING,
         MINING,
-    }
-
-    protected enum World {
-        UNKNOWN,
-        MAIN_LOBBY,
-        PROTOTYPE_LOBBY,
-        SKYBLOCK_HUB,
-        SKYBLOCK_DWARVEN_MINES,
-        SKYBLOCK_UNKNOWN
     }
 
     private final Vec3 FORGE_POS = new Vec3(0.5, 149, -68.5);
@@ -91,7 +79,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
         playerInRangeTick = 0;
         worldChangedTicks = 0;
         currentPos = null;
-        this.world = World.UNKNOWN;
+        this.world = HypixelHelper.World.UNKNOWN;
         this.state = State.EXECUTING;
     }
 
@@ -103,52 +91,6 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
     @Override
     public String displayName0() {
         return "Mithril Mining";
-    }
-
-    private World getWorldFromScoreBoard() {
-        Scoreboard scoreboard = baritone.getPlayerContext().player().getScoreboard();
-        Objective sidebar = baritone.getPlayerContext().player().getScoreboard().getDisplayObjective(1);
-        if (sidebar != null) {
-            String gamemode = Stream.of(sidebar.getDisplayName().getSiblings())
-                    .filter(list -> !list.isEmpty())
-                    .map(list -> list.stream()
-                            .map(Component::getString)
-                            .reduce("", String::concat)
-                    )
-                    .reduce("", String::concat);
-            switch (gamemode) {
-                case "HYPIXEL" -> {
-                    return World.MAIN_LOBBY;
-                }
-                case "PROTOTYPE" -> {
-                    return World.PROTOTYPE_LOBBY;
-                }
-                case "SKYBLOCK CO-OP" -> {
-                    Collection<Score> scores = scoreboard.getPlayerScores(sidebar);
-                    for (Score score : scores) {
-                        PlayerTeam team = scoreboard.getPlayersTeam(score.getOwner());
-                        if (team != null) {
-                            String line = Stream.of(team.getPlayerPrefix(), team.getFormattedDisplayName(), team.getPlayerSuffix())
-                                    .filter(Objects::nonNull)
-                                    .map(Component::getSiblings)
-                                    .filter(list -> !list.isEmpty())
-                                    .map(list -> list.stream()
-                                            .map(Component::getString)
-                                            .reduce("", String::concat)
-                                    )
-                                    .reduce("", String::concat);
-                            if (line.matches("^ . Village")) {
-                                return World.SKYBLOCK_HUB;
-                            } else if (line.matches("^ . (The Forge|Forge Basin|Rampart's Quarry|Far Reserve)$")) {
-                                return World.SKYBLOCK_DWARVEN_MINES;
-                            }
-                        }
-                    }
-                    return World.SKYBLOCK_UNKNOWN;
-                }
-            }
-        }
-        return World.UNKNOWN;
     }
 
     private long getPlayerCountNearBlock(Vec3 vec) {
@@ -179,7 +121,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
-        World worldFromScoreBoard = getWorldFromScoreBoard();
+        HypixelHelper.World worldFromScoreBoard = getWorldFromScoreBoard(ctx.player().getScoreboard());
         // sometimes world would only change for a tick or two
         if (worldFromScoreBoard != world) {
             worldChangedTicks++;
@@ -207,6 +149,7 @@ public final class MithrilProcess extends BaritoneProcessHelper implements IMith
                         case TELEPORTED_IN_HUB -> State.WAITING_IN_HUB;
                         case TELEPORTED_IN_DWARVEN_MINES -> State.WAITING_IN_DWARVEN_MINES;
                         case TELEPORTED_IN_HYPIXEL_LOBBY -> State.WAITING_IN_HYPIXEL_LOBBY;
+                        // this won't actually happen, but IDEA will complain
                         default -> state;
                     };
                 }

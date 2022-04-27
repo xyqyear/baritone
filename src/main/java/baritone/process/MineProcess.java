@@ -46,6 +46,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static baritone.api.pathing.movement.ActionCosts.COST_INF;
+import static baritone.api.utils.HypixelHelper.getWorldFromScoreBoard;
 
 /**
  * Mine blocks of a certain type
@@ -65,6 +66,8 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
     private int desiredQuantity;
     private int tickCount;
     private BlockPos currentlyMiningBlockPos;
+    private HypixelHelper.World world;
+    private int worldChangedTicks;
 
     public MineProcess(Baritone baritone) {
         super(baritone);
@@ -77,6 +80,25 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
+        if (Baritone.settings().cancelWhenNotInCrystalHollows.value) {
+            HypixelHelper.World worldFromScoreBoard = getWorldFromScoreBoard(ctx.player().getScoreboard());
+            // sometimes world would only change for a tick or two
+            if (worldFromScoreBoard != world) {
+                worldChangedTicks++;
+                if (worldChangedTicks > 5) {
+                    world = worldFromScoreBoard;
+                    worldChangedTicks = 0;
+                }
+            } else {
+                worldChangedTicks = 0;
+            }
+            if (world != HypixelHelper.World.SKYBLOCK_CRYSTAL_HOLLOWS) {
+                logDirect("Player left Crystal Hallows, canceling...");
+                cancel();
+                return null;
+            }
+        }
+
         if (desiredQuantity > 0) {
             int curr = ctx.player().getInventory().items.stream()
                     .filter(stack -> filter.has(stack))
@@ -513,6 +535,12 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         this.branchPointRunaway = null;
         this.anticipatedDrops = new HashMap<>();
         this.currentlyMiningBlockPos = null;
+        if (Baritone.settings().cancelWhenNotInCrystalHollows.value) {
+            this.world = HypixelHelper.World.SKYBLOCK_CRYSTAL_HOLLOWS;
+        } else {
+            this.world = HypixelHelper.World.UNKNOWN;
+        }
+        this.worldChangedTicks = 0;
         if (filter != null) {
             rescan(new ArrayList<>(), new CalculationContext(baritone));
         }

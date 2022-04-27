@@ -220,6 +220,11 @@ public final class Settings {
     public final Setting<Boolean> sneakWhileMining = new Setting<>(false);
 
     /**
+     * If turned on, baritone will cancel mining when not in crystal hollows
+     */
+    public final Setting<Boolean> cancelWhenNotInCrystalHollows = new Setting<>(false);
+
+    /**
      * Blocks that Baritone will attempt to avoid (Used in avoidance)
      */
     public final Setting<List<Block>> blocksToAvoid = new Setting<>(new ArrayList<>(
