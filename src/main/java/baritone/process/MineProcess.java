@@ -145,10 +145,9 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         Optional<BlockPos> shaft;
         if (Baritone.settings().allowMoveWhileMining.value) {
             shaft = curr.stream()
-                .filter(pos -> pos.getX() == ctx.playerFeet().getX() && pos.getZ() == ctx.playerFeet().getZ())
-                .filter(pos -> pos.getY() >= ctx.playerFeet().getY())
+                .filter(pos -> RotationUtils.reachable(ctx, pos).isPresent())
                 .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
-                .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
+                .min(Comparator.comparingDouble(new BlockPos(ctx.playerHead())::distSqr));
         } else {
             if (currentlyMiningBlockPos != null &&
                     filter.has(BlockStateInterface.get(ctx, currentlyMiningBlockPos).getBlock())) { // if the block hasn't finished mining
