@@ -17,17 +17,26 @@
 
 package baritone.api.utils;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Score;
 import net.minecraft.world.scores.Scoreboard;
 
-import java.util.Collection;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class HypixelHelper {
+    public static List<AbstractMap.SimpleEntry<BlockPos, Integer>> rubySpots = Arrays.asList(
+            new AbstractMap.SimpleEntry<>(new BlockPos(725, 52, 747), 20),
+            new AbstractMap.SimpleEntry<>(new BlockPos(228, 52, 407), 26),
+            new AbstractMap.SimpleEntry<>(new BlockPos(262, 52, 307), 25),
+            new AbstractMap.SimpleEntry<>(new BlockPos(704, 52, 313), 27),
+            new AbstractMap.SimpleEntry<>(new BlockPos(410, 52, 557), 26),
+            new AbstractMap.SimpleEntry<>(new BlockPos(350, 52, 548), 27)
+    );
+
     public enum World {
         UNKNOWN,
         MAIN_LOBBY,

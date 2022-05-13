@@ -32,6 +32,7 @@ import baritone.utils.BaritoneProcessHelper;
 import baritone.utils.BlockStateInterface;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -44,6 +45,7 @@ import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static baritone.api.pathing.movement.ActionCosts.COST_INF;
 import static baritone.api.utils.HypixelHelper.getWorldFromScoreBoard;
@@ -55,7 +57,7 @@ import static baritone.api.utils.HypixelHelper.getWorldFromScoreBoard;
  */
 public final class MineProcess extends BaritoneProcessHelper implements IMineProcess {
 
-    private static final int ORE_LOCATIONS_COUNT = 64;
+    private static final int ORE_LOCATIONS_COUNT = 128;
 
     private BlockOptionalMetaLookup filter;
     private List<BlockPos> knownOreLocations;
@@ -68,6 +70,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
     private BlockPos currentlyMiningBlockPos;
     private HypixelHelper.World world;
     private int worldChangedTicks;
+    private AbstractMap.SimpleEntry<BlockPos, Integer> currentRubySpot;
 
     public MineProcess(Baritone baritone) {
         super(baritone);
@@ -202,6 +205,13 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         return command;
     }
 
+    private static boolean blockInSquare(Vec3i block, Vec3i squareCenter, int squareRadius) {
+        return block.getX() >= squareCenter.getX() - squareRadius &&
+                block.getX() <= squareCenter.getX() + squareRadius &&
+                block.getZ() >= squareCenter.getZ() - squareRadius &&
+                block.getZ() <= squareCenter.getZ() + squareRadius;
+    }
+
 
     private void updateLoucaSystem() {
         Map<BlockPos, Long> copy = new HashMap<>(anticipatedDrops);
@@ -283,6 +293,9 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         }
         List<BlockPos> dropped = droppedItemsScan();
         List<BlockPos> locs = searchWorld(context, filter, ORE_LOCATIONS_COUNT, already, blacklist, dropped);
+        if (Baritone.settings().cancelWhenNotInCrystalHollows.value) {
+            locs.removeIf(pos -> !blockInSquare(pos, currentRubySpot.getKey(), currentRubySpot.getValue()));
+        }
         locs.addAll(dropped);
         if (locs.isEmpty() && !Baritone.settings().exploreForBlocks.value) {
             logDirect("No locations for " + filter + " known, cancelling");
@@ -541,6 +554,15 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         }
         this.worldChangedTicks = 0;
         if (filter != null) {
+            if (Baritone.settings().cancelWhenNotInCrystalHollows.value) {
+                this.currentRubySpot = IntStream.range(0, HypixelHelper.rubySpots.size())
+                        .mapToObj(i -> new AbstractMap.SimpleEntry<>(i, HypixelHelper.rubySpots.get(i).getKey()))
+                        .min(Comparator.comparingDouble(i -> ctx.playerFeet().distSqr(i.getValue())))
+                        .map(Map.Entry::getKey)
+                        .map(HypixelHelper.rubySpots::get)
+                        .orElse(null);
+                logDirect("Current ruby spot: " + this.currentRubySpot);
+            }
             rescan(new ArrayList<>(), new CalculationContext(baritone));
         }
     }
