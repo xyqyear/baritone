@@ -33,6 +33,7 @@ public class HypixelHelper {
             new AbstractMap.SimpleEntry<>(new BlockPos(228, 52, 407), 26),
             new AbstractMap.SimpleEntry<>(new BlockPos(262, 52, 307), 25),
             new AbstractMap.SimpleEntry<>(new BlockPos(704, 52, 313), 27),
+            new AbstractMap.SimpleEntry<>(new BlockPos(484, 52, 264), 25),
             new AbstractMap.SimpleEntry<>(new BlockPos(410, 52, 557), 26),
             new AbstractMap.SimpleEntry<>(new BlockPos(350, 52, 548), 27)
     );
