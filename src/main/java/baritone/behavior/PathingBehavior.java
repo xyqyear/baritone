@@ -20,6 +20,7 @@ package baritone.behavior;
 import baritone.Baritone;
 import baritone.api.behavior.IPathingBehavior;
 import baritone.api.event.events.*;
+import baritone.api.event.events.type.EventState;
 import baritone.api.pathing.calc.IPath;
 import baritone.api.pathing.goals.Goal;
 import baritone.api.pathing.goals.GoalXZ;
@@ -42,6 +43,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundChatPacket;
 
 public final class PathingBehavior extends Behavior implements IPathingBehavior, Helper {
 
@@ -103,6 +105,16 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
         tickPath();
         ticksElapsedSoFar++;
         dispatchEvents();
+    }
+
+    // for automatically renew crystal hollows pass
+    @Override
+    public void onReceivePacket(PacketEvent event) {
+        if (event.getState() == EventState.POST && event.getPacket() instanceof ClientboundChatPacket packet) {
+            if (packet.getMessage().getString().startsWith("Your pass to the Crystal Hollows will expire")) {
+                ctx.player().chat("/purchasecrystallhollowspass");
+            }
+        }
     }
 
     @Override
