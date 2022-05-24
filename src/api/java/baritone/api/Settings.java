@@ -22,10 +22,9 @@ import baritone.api.utils.SettingsUtil;
 import baritone.api.utils.TypeUtils;
 import baritone.api.utils.gui.BaritoneToast;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
-import net.minecraft.network.chat.BaseComponent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -220,9 +219,35 @@ public final class Settings {
     public final Setting<Boolean> sneakWhileMining = new Setting<>(false);
 
     /**
-     * If turned on, baritone will cancel mining when not in crystal hollows
+     * affecting all sorts of behaviors in favor of gemstone mining
      */
-    public final Setting<Boolean> cancelWhenNotInCrystalHollows = new Setting<>(false);
+    public final Setting<Integer> oreLocationScanCount = new Setting<>(64);
+
+    /**
+     * affecting all sorts of behaviors in favor of gemstone mining
+     */
+    public final Setting<Boolean> gemstoneMode = new Setting<>(false);
+
+    /**
+     * ruby gemstone spots, each map is index->x,y,z,radius (square radius)
+     * was thinking making it List<List<Integer>>, but baritone setting string parser wasn't made with this case in mind
+     */
+    public final Setting<Map<Integer, List<Integer>>> rubySpots = new Setting<>(
+            new HashMap<Integer, List<Integer>>() {{
+                put(1, Arrays.asList(725, 52, 747, 20));
+                put(2, Arrays.asList(228, 52, 407, 26));
+                put(3, Arrays.asList(262, 52, 307, 25));
+                put(4, Arrays.asList(704, 52, 313, 27));
+                put(5, Arrays.asList(484, 52, 264, 25));
+                put(6, Arrays.asList(410, 52, 557, 26));
+                put(7, Arrays.asList(350, 52, 548, 27));
+            }}
+    );
+
+    /**
+     * If turned on, baritone will disconnect when not in crystal hollows while mining
+     */
+    public final Setting<Boolean> disconnectWhenNotInCrystalHollows = new Setting<>(false);
 
     /**
      * Blocks that Baritone will attempt to avoid (Used in avoidance)

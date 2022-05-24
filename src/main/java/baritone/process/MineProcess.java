@@ -56,9 +56,6 @@ import static baritone.api.utils.HypixelHelper.getWorldFromScoreBoard;
  * @author leijurv
  */
 public final class MineProcess extends BaritoneProcessHelper implements IMineProcess {
-
-    private static final int ORE_LOCATIONS_COUNT = 128;
-
     private BlockOptionalMetaLookup filter;
     private List<BlockPos> knownOreLocations;
     private List<BlockPos> blacklist; // inaccessible
@@ -83,7 +80,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
-        if (Baritone.settings().cancelWhenNotInCrystalHollows.value) {
+        if (Baritone.settings().disconnectWhenNotInCrystalHollows.value) {
             HypixelHelper.World worldFromScoreBoard = getWorldFromScoreBoard(ctx.player().getScoreboard());
             // sometimes world would only change for a tick or two
             if (worldFromScoreBoard != world) {
@@ -96,8 +93,9 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 worldChangedTicks = 0;
             }
             if (world != HypixelHelper.World.SKYBLOCK_CRYSTAL_HOLLOWS) {
-                logDirect("Player left Crystal Hallows, canceling...");
+                logDirect("Player left Crystal Hallows, disconnecting...");
                 cancel();
+                ctx.world().disconnect();
                 return null;
             }
         }
@@ -245,7 +243,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         List<BlockPos> locs = knownOreLocations;
         if (!locs.isEmpty()) {
             CalculationContext context = new CalculationContext(baritone);
-            List<BlockPos> locs2 = prune(context, new ArrayList<>(locs), filter, ORE_LOCATIONS_COUNT, blacklist, droppedItemsScan());
+            List<BlockPos> locs2 = prune(context, new ArrayList<>(locs), filter, Baritone.settings().oreLocationScanCount.value, blacklist, droppedItemsScan());
             // can't reassign locs, gotta make a new var locs2, because we use it in a lambda right here, and variables you use in a lambda must be effectively final
             Goal goal = new GoalComposite(locs2.stream().map(loc -> coalesce(loc, locs2, context)).toArray(Goal[]::new));
             knownOreLocations = locs2;
@@ -292,8 +290,8 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
             return;
         }
         List<BlockPos> dropped = droppedItemsScan();
-        List<BlockPos> locs = searchWorld(context, filter, ORE_LOCATIONS_COUNT, already, blacklist, dropped);
-        if (Baritone.settings().cancelWhenNotInCrystalHollows.value) {
+        List<BlockPos> locs = searchWorld(context, filter, Baritone.settings().oreLocationScanCount.value, already, blacklist, dropped);
+        if (Baritone.settings().gemstoneMode.value) {
             locs.removeIf(pos -> !blockInSquare(pos, currentRubySpot.getKey(), currentRubySpot.getValue()));
         }
         locs.addAll(dropped);
@@ -458,7 +456,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 }
             }
         }
-        knownOreLocations = prune(new CalculationContext(baritone), knownOreLocations, filter, ORE_LOCATIONS_COUNT, blacklist, dropped);
+        knownOreLocations = prune(new CalculationContext(baritone), knownOreLocations, filter, Baritone.settings().oreLocationScanCount.value, blacklist, dropped);
     }
 
     private static List<BlockPos> prune(CalculationContext ctx, List<BlockPos> locs2, BlockOptionalMetaLookup filter, int max, List<BlockPos> blacklist, List<BlockPos> dropped) {
@@ -547,19 +545,26 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         this.branchPointRunaway = null;
         this.anticipatedDrops = new HashMap<>();
         this.currentlyMiningBlockPos = null;
-        if (Baritone.settings().cancelWhenNotInCrystalHollows.value) {
+        if (Baritone.settings().gemstoneMode.value) {
             this.world = HypixelHelper.World.SKYBLOCK_CRYSTAL_HOLLOWS;
         } else {
             this.world = HypixelHelper.World.UNKNOWN;
         }
         this.worldChangedTicks = 0;
         if (filter != null) {
-            if (Baritone.settings().cancelWhenNotInCrystalHollows.value) {
-                this.currentRubySpot = IntStream.range(0, HypixelHelper.rubySpots.size())
-                        .mapToObj(i -> new AbstractMap.SimpleEntry<>(i, HypixelHelper.rubySpots.get(i).getKey()))
+            List<AbstractMap.SimpleEntry<BlockPos, Integer>> rubySpots =
+                    Baritone.settings().rubySpots.value
+                            .values()
+                            .stream()
+                            .map(i -> new AbstractMap.SimpleEntry<>(new BlockPos(i.get(0), i.get(1), i.get(2)), i.get(3)))
+                            .collect(Collectors.toList());
+
+            if (Baritone.settings().gemstoneMode.value) {
+                this.currentRubySpot = IntStream.range(0, rubySpots.size())
+                        .mapToObj(i -> new AbstractMap.SimpleEntry<>(i, rubySpots.get(i).getKey()))
                         .min(Comparator.comparingDouble(i -> ctx.playerFeet().distSqr(i.getValue())))
                         .map(Map.Entry::getKey)
-                        .map(HypixelHelper.rubySpots::get)
+                        .map(rubySpots::get)
                         .orElse(null);
                 logDirect("Current ruby spot: " + this.currentRubySpot);
             }
