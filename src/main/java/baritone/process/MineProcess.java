@@ -64,6 +64,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
     private GoalRunAway branchPointRunaway;
     private int desiredQuantity;
     private int tickCount;
+    private int tickCountForRightClick;
     private BlockPos currentlyMiningBlockPos;
     private HypixelHelper.World world;
     private int worldChangedTicks;
@@ -161,7 +162,8 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         }
         baritone.getInputOverrideHandler().clearAllKeys();
         int rightClickEvery = Baritone.settings().rightClickEvery.value;
-        if (rightClickEvery > 0 && tickCount % rightClickEvery == 0) {
+        if (rightClickEvery > 0 && tickCountForRightClick++ > rightClickEvery && shaft.isPresent()) {
+            tickCountForRightClick = 0;
             ctx.player().connection.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND));
         }
         if (Baritone.settings().holdLeftClickWhileMining.value) {
