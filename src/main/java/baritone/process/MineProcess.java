@@ -36,6 +36,7 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.AirBlock;
@@ -43,6 +44,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.HitResult;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -81,6 +84,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
+        // ----------------- disconnect when not in crystal hollows -----------------
         if (Baritone.settings().disconnectWhenNotInCrystalHollows.value) {
             HypixelHelper.World worldFromScoreBoard = getWorldFromScoreBoard(ctx.player().getScoreboard());
             // sometimes world would only change for a tick or two
@@ -101,6 +105,23 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
             }
         }
 
+        // ----------------- disconnect when player looking at us -----------------
+        if (ctx.entitiesStream()
+                .filter(entity -> entity.getType() == EntityType.PLAYER)
+                .filter(entity -> entity.getUUID() != ctx.player().getUUID())
+                // we tell which entities are players by checking if they have a hypixel level prefix.
+                .filter(entity -> entity.getDisplayName().getString().matches("^\\[[0-9]{1,4}\\] .*$"))
+                .map(entity -> RayTraceUtils.rayTraceTowards(entity, new Rotation(entity.getYRot(), entity.getXRot()), 100))
+                .filter(hitResult -> hitResult.getType() == HitResult.Type.BLOCK)
+                // if the block that the player is looking at is within 2 blocks of us, we disconnect
+                .anyMatch(hitResult -> hitResult.getLocation().distanceTo(ctx.player().position()) < 2)) {
+            logDirect("Player looking at us, disconnecting...");
+            cancel();
+            ctx.world().disconnect();
+            return null;
+        }
+
+        // ----------------- check if desired quantity is reached -----------------
         if (desiredQuantity > 0) {
             int curr = ctx.player().getInventory().items.stream()
                     .filter(stack -> filter.has(stack))
@@ -112,6 +133,8 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 return null;
             }
         }
+
+        // ----------------- when calculating failed -----------------
         if (calcFailed) {
             if (!knownOreLocations.isEmpty() && Baritone.settings().blacklistClosestOnFailure.value) {
                 logDirect("Unable to find any path to " + filter + ", blacklisting presumably unreachable closest instance...");
@@ -129,11 +152,14 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 return null;
             }
         }
+
+        // ----------------- allow breaking -----------------
         if (!Baritone.settings().allowBreak.value) {
             logDirect("Unable to mine when allowBreak is false!");
             cancel();
             return null;
         }
+
         updateLoucaSystem();
         int mineGoalUpdateInterval = Baritone.settings().mineGoalUpdateInterval.value;
         List<BlockPos> curr = new ArrayList<>(knownOreLocations);
@@ -147,17 +173,17 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         Optional<BlockPos> shaft;
         if (Baritone.settings().allowMoveWhileMining.value) {
             shaft = curr.stream()
-                .filter(pos -> RotationUtils.reachable(ctx, pos).isPresent())
-                .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
-                .min(Comparator.comparingDouble(new BlockPos(ctx.playerHead())::distSqr));
+                    .filter(pos -> RotationUtils.reachable(ctx, pos).isPresent())
+                    .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
+                    .min(Comparator.comparingDouble(new BlockPos(ctx.playerHead())::distSqr));
         } else {
             if (currentlyMiningBlockPos != null &&
                     filter.has(BlockStateInterface.get(ctx, currentlyMiningBlockPos).getBlock())) { // if the block hasn't finished mining
                 shaft = Optional.of(currentlyMiningBlockPos);
             } else {
                 shaft = curr.stream()
-                    .filter(pos -> filter.has(BlockStateInterface.get(ctx, pos).getBlock())) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
-                    .min(Comparator.comparingDouble(new BlockPos(ctx.playerHead())::distSqr)); // since we are not moving, we compare the distances from player's eyes
+                        .filter(pos -> filter.has(BlockStateInterface.get(ctx, pos).getBlock())) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
+                        .min(Comparator.comparingDouble(new BlockPos(ctx.playerHead())::distSqr)); // since we are not moving, we compare the distances from player's eyes
             }
         }
         baritone.getInputOverrideHandler().clearAllKeys();
@@ -275,6 +301,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 public boolean isInGoal(int x, int y, int z) {
                     return false;
                 }
+
                 @Override
                 public double heuristic() {
                     return Double.NEGATIVE_INFINITY;
