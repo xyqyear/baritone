@@ -229,6 +229,16 @@ public final class Settings {
     public final Setting<Boolean> gemstoneMode = new Setting<>(false);
 
     /**
+     * hypixel mining speed
+     */
+    public final Setting<Integer> miningSpeed = new Setting<>(1);
+
+    /**
+     * mining tick headroom
+     */
+    public final Setting<Integer> miningTickHeadroom = new Setting<>(0);
+
+    /**
      * ruby gemstone spots, each map is index->x,y,z,radius (square radius)
      * was thinking making it List<List<Integer>>, but baritone setting string parser wasn't made with this case in mind
      */
