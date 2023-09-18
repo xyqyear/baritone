@@ -19,7 +19,6 @@ package baritone.api.utils;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Score;
@@ -27,8 +26,6 @@ import net.minecraft.world.scores.Scoreboard;
 
 import java.util.*;
 import java.util.stream.Stream;
-
-import static net.minecraft.world.level.block.Blocks.*;
 
 public class HypixelHelper {
     public enum World {
@@ -39,22 +36,6 @@ public class HypixelHelper {
         SKYBLOCK_DWARVEN_MINES,
         SKYBLOCK_CRYSTAL_HOLLOWS,
         SKYBLOCK_UNKNOWN
-    }
-
-    public static boolean isRuby(Block block) {
-        return block == RED_STAINED_GLASS || block == RED_STAINED_GLASS_PANE;
-    }
-
-    public static int getMiningTime(Block block, int miningSpeed) {
-        int blockStrength;
-        if (block.equals(RED_STAINED_GLASS)) {
-            blockStrength = 2500;
-        } else if (block.equals(RED_STAINED_GLASS_PANE)) {
-            blockStrength = 2300;
-        } else {
-            blockStrength = 0;
-        }
-        return blockStrength * 30 / miningSpeed;
     }
 
     public static World getWorldFromScoreBoard(Scoreboard scoreboard) {
