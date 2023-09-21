@@ -42,7 +42,8 @@ public final class DefaultCommands {
                 new VersionCommand(baritone),
                 new RepackCommand(baritone),
                 new BuildCommand(baritone),
-                new SchematicaCommand(baritone),
+                //new SchematicaCommand(baritone),
+                new LitematicaCommand(baritone),
                 new ComeCommand(baritone),
                 new AxisCommand(baritone),
                 new ForceCancelCommand(baritone),
@@ -66,7 +67,8 @@ public final class DefaultCommands {
                 new CommandAlias(baritone, "sethome", "Sets your home waypoint", "waypoints save home"),
                 new CommandAlias(baritone, "home", "Path to your home waypoint", "waypoints goto home"),
                 new SelCommand(baritone),
-                new MithrilCommand(baritone)
+                new MithrilCommand(baritone),
+                new ElytraCommand(baritone)
         ));
         ExecutionControlCommands prc = new ExecutionControlCommands(baritone);
         commands.add(prc.pauseCommand);
