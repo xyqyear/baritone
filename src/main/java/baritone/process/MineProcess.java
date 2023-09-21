@@ -30,15 +30,18 @@ import baritone.pathing.movement.CalculationContext;
 import baritone.pathing.movement.MovementHelper;
 import baritone.utils.BaritoneProcessHelper;
 import baritone.utils.BlockStateInterface;
+import net.minecraft.client.Option;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.block.AirBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -84,6 +87,34 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
 
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
+        // ----------------- automatically switch to drill with the least fuel
+        if (Baritone.settings().gemstoneMode.value && tickCount % 20 == 0) {
+            int leastFuel = Integer.MAX_VALUE;
+            Optional<Integer> leastFuelSlot = Optional.empty();
+            for (int i = 0; i < 9; i++) {
+                ItemStack itemStack = ctx.player().getInventory().getItem(i);
+                HypixelHelper.Pickaxe pickaxe = HypixelHelper.getPickaxeType(itemStack);
+
+                switch (pickaxe) {
+                    case GEMSTONE_GAUNTLET -> leastFuelSlot = Optional.of(i);
+                    case DIVANS_DRILL -> {
+                        Optional<Integer> fuel = HypixelHelper.getFuel(ctx.player(), itemStack);
+                        if (fuel.isEmpty()) {
+                            break;
+                        }
+                        int fuelValue = fuel.get();
+                        if (fuelValue == 0 || fuelValue >= leastFuel) {
+                            break;
+                        }
+                        leastFuel = fuelValue;
+                        leastFuelSlot = Optional.of(i);
+                    }
+                }
+            }
+
+            leastFuelSlot.ifPresent(integer -> ctx.player().getInventory().selected = integer);
+        }
+
         // ----------------- disconnect when not in crystal hollows -----------------
         if (Baritone.settings().disconnectWhenNotInCrystalHollows.value) {
             HypixelHelper.World worldFromScoreBoard = getWorldFromScoreBoard(ctx.player().getScoreboard());

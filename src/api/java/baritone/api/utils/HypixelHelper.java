@@ -17,14 +17,20 @@
 
 package baritone.api.utils;
 
+import net.minecraft.client.Option;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Score;
 import net.minecraft.world.scores.Scoreboard;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class HypixelHelper {
@@ -37,6 +43,51 @@ public class HypixelHelper {
         SKYBLOCK_CRYSTAL_HOLLOWS,
         SKYBLOCK_UNKNOWN
     }
+
+    public enum Pickaxe {
+        DIVANS_DRILL,
+        GEMSTONE_GAUNTLET,
+        UNKNOWN
+    }
+
+
+    public static Pickaxe getPickaxeType(ItemStack itemStack) {
+        String itemName = itemStack.getDisplayName().getString();
+        if (itemName.endsWith("]")) {
+            itemName = itemName.replace("]", "");
+        }
+        if (itemName.endsWith("Divan's Drill")) {
+            return Pickaxe.DIVANS_DRILL;
+        } else if (itemName.endsWith("Gemstone Gauntlet")) {
+            return Pickaxe.GEMSTONE_GAUNTLET;
+        } else {
+            return Pickaxe.UNKNOWN;
+        }
+    }
+
+
+    public static Optional<Integer> getFuel(LocalPlayer player, ItemStack itemStack) {
+        return itemStack.getTooltipLines(player, TooltipFlag.Default.ADVANCED)
+                .stream()
+                .filter(component -> {
+                    return component.getString().startsWith("Fuel:");
+                })
+                .findFirst()
+                .map(component -> {
+                    Matcher matcher = Pattern.compile("^Fuel: ([\\d,k]+)/[\\d,k]+$").matcher(component.getString().strip());
+                    if (!matcher.find()) {
+                        return null;
+                    }
+                    String fuelString = matcher.group(1)
+                            .replace(",", "")
+                            .replace("k", "000");
+                    if (!fuelString.matches("^\\d+$")) {
+                        return null;
+                    }
+                    return Integer.parseInt(fuelString);
+                });
+    }
+
 
     public static World getWorldFromScoreBoard(Scoreboard scoreboard) {
         Objective sidebar = scoreboard.getDisplayObjective(1);
