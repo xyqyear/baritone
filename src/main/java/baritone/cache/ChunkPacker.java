@@ -33,6 +33,7 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.phys.Vec3;
+
 import java.util.*;
 
 import static baritone.utils.BlockStateInterface.getFromChunk;
@@ -132,7 +133,7 @@ public final class ChunkPacker {
                 return PathingBlockType.AVOID;
             }
             if (x == 0 || x == 15 || z == 0 || z == 15) {
-                Vec3 flow = state.getFluidState().getFlow(chunk.getLevel(), new BlockPos(x + chunk.getPos().x << 4, y, z + chunk.getPos().z << 4));
+                Vec3 flow = state.getFluidState().getFlow(chunk.getLevel(), new BlockPos(x + (chunk.getPos().x << 4), y, z + (chunk.getPos().z << 4)));
                 if (flow.x != 0.0 || flow.z != 0.0) {
                     return PathingBlockType.WATER;
                 }

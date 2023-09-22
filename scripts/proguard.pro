@@ -1,5 +1,6 @@
 -keepattributes Signature
 -keepattributes *Annotation*
+-keepattributes InnerClasses
 
 -optimizationpasses 5
 -verbose
@@ -18,6 +19,8 @@
 -dontwarn module-info
 # we dont have forge
 -dontwarn baritone.launch.BaritoneForgeModXD
+# progard doesn't like signature polymorphism
+-dontwarn java.lang.invoke.MethodHandle
 
 # please do not change the comment below
 -keep class baritone.api.** { *; } # this is the keep api
@@ -27,6 +30,7 @@
 -keep class baritone.api.IBaritoneProvider
 
 -keep class baritone.api.utils.MyChunkPos { *; } # even in standalone we need to keep this for gson reflect
+-keepname class baritone.api.utils.BlockOptionalMeta # this name is exposed to the user, so we need to keep it in all builds
 
 # Keep any class or member annotated with @KeepName so we dont have to put everything in the script
 -keep,allowobfuscation @interface baritone.KeepName
@@ -45,9 +49,10 @@
 
 #try to keep usage of schematica in separate classes
 -keep class baritone.utils.schematic.schematica.**
+-keep class baritone.utils.schematic.litematica.**
 #proguard doesnt like it when it cant find our fake schematica classes
 -dontwarn baritone.utils.schematic.schematica.**
-
+-dontwarn baritone.utils.schematic.litematica.**
 
 # Keep - Applications. Keep all application classes, along with their 'main'
 # methods.

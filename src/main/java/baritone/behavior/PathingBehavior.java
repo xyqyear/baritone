@@ -100,6 +100,7 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
             baritone.getPathingControlManager().cancelEverything();
             return;
         }
+
         expectedSegmentStart = pathStart();
         baritone.getPathingControlManager().preTick();
         tickPath();
@@ -249,11 +250,11 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
         if (current != null) {
             switch (event.getState()) {
                 case PRE:
-                    lastAutoJump = mc.options.autoJump;
-                    mc.options.autoJump = false;
+                    lastAutoJump = ctx.minecraft().options.autoJump;
+                    ctx.minecraft().options.autoJump = false;
                     break;
                 case POST:
-                    mc.options.autoJump = lastAutoJump;
+                    ctx.minecraft().options.autoJump = lastAutoJump;
                     break;
                 default:
                     break;

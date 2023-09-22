@@ -50,12 +50,15 @@ public interface IBuilderProcess extends IBaritoneProcess {
      */
     boolean build(String name, File schematic, Vec3i origin);
 
+    @Deprecated
     default boolean build(String schematicFile, BlockPos origin) {
         File file = new File(new File(Minecraft.getInstance().gameDirectory, "schematics"), schematicFile);
         return build(schematicFile, file, origin);
     }
 
     void buildOpenSchematic();
+
+    void buildOpenLitematic(int i);
 
     void pause();
 

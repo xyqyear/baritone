@@ -29,13 +29,17 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import java.awt.*;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Baritone's settings. Settings apply to all Baritone instances.
@@ -48,6 +52,11 @@ public final class Settings {
      * Allow Baritone to break blocks
      */
     public final Setting<Boolean> allowBreak = new Setting<>(true);
+
+    /**
+     * Blocks that baritone will be allowed to break even with allowBreak set to false
+     */
+    public final Setting<List<Block>> allowBreakAnyway = new Setting<>(new ArrayList<>());
 
     /**
      * Allow Baritone to sprint
@@ -63,6 +72,16 @@ public final class Settings {
      * Allow Baritone to move items in your inventory to your hotbar
      */
     public final Setting<Boolean> allowInventory = new Setting<>(false);
+
+    /**
+     * Wait this many ticks between InventoryBehavior moving inventory items
+     */
+    public final Setting<Integer> ticksBetweenInventoryMoves = new Setting<>(1);
+
+    /**
+     * Come to a halt before doing any inventory moves. Intended for anticheat such as 2b2t
+     */
+    public final Setting<Boolean> inventoryMoveOnlyIfStationary = new Setting<>(false);
 
     /**
      * Disable baritone's auto-tool at runtime, but still assume that another mod will provide auto tool functionality
@@ -103,6 +122,13 @@ public final class Settings {
     public final Setting<Double> walkOnWaterOnePenalty = new Setting<>(3D);
 
     /**
+     * Don't allow breaking blocks next to liquids.
+     * <p>
+     * Enable if you have mods adding custom fluid physics.
+     */
+    public final Setting<Boolean> strictLiquidCheck = new Setting<>(false);
+
+    /**
      * Allow Baritone to fall arbitrary distances and place a water bucket beneath it.
      * Reliability: questionable.
      */
@@ -111,6 +137,8 @@ public final class Settings {
     /**
      * Allow Baritone to assume it can walk on still water just like any other block.
      * This functionality is assumed to be provided by a separate library that might have imported Baritone.
+     * <p>
+     * Note: This will prevent some usage of the frostwalker enchantment, like pillaring up from water.
      */
     public final Setting<Boolean> assumeWalkOnWater = new Setting<>(false);
 
@@ -260,7 +288,7 @@ public final class Settings {
      * Blocks that Baritone is not allowed to break
      */
     public final Setting<List<Block>> blocksToDisallowBreaking = new Setting<>(new ArrayList<>(
-        // Leave Empty by Default
+            // Leave Empty by Default
     ));
 
     /**
@@ -307,6 +335,8 @@ public final class Settings {
      * A mapping of blocks to blocks treated as correct in their position
      * <p>
      * If a schematic asks for a block on this mapping, all blocks on the mapped list will be accepted at that location as well
+     * <p>
+     * Syntax same as <a href="https://baritone.leijurv.com/baritone/api/Settings.html#buildSubstitutes">buildSubstitutes</a>
      */
     public final Setting<Map<Block, List<Block>>> buildValidSubstitutes = new Setting<>(new HashMap<>());
 
@@ -314,6 +344,15 @@ public final class Settings {
      * A mapping of blocks to blocks to be built instead
      * <p>
      * If a schematic asks for a block on this mapping, Baritone will place the first placeable block in the mapped list
+     * <p>
+     * Usage Syntax:
+     * <pre>
+     *      sourceblockA->blockToSubstituteA1,blockToSubstituteA2,...blockToSubstituteAN,sourceBlockB->blockToSubstituteB1,blockToSubstituteB2,...blockToSubstituteBN,...sourceBlockX->blockToSubstituteX1,blockToSubstituteX2...blockToSubstituteXN
+     * </pre>
+     * Example:
+     * <pre>
+     *     stone->cobblestone,andesite,oak_planks->birch_planks,acacia_planks,glass
+     * </pre>
      */
     public final Setting<Map<Block, List<Block>>> buildSubstitutes = new Setting<>(new HashMap<>());
 
@@ -335,6 +374,12 @@ public final class Settings {
      * If this is true, the builder will ignore directionality of certain blocks like glazed terracotta.
      */
     public final Setting<Boolean> buildIgnoreDirection = new Setting<>(false);
+
+    /**
+     * A list of names of block properties the builder will ignore.
+     */
+    public final Setting<List<String>> buildIgnoreProperties = new Setting<>(new ArrayList<>(Arrays.asList(
+    )));
 
     /**
      * If this setting is true, Baritone will never break a block that is adjacent to an unsupported falling block.
@@ -463,6 +508,9 @@ public final class Settings {
      */
     public final Setting<Double> mobSpawnerAvoidanceCoefficient = new Setting<>(2.0);
 
+    /**
+     * Distance to avoid mob spawners.
+     */
     public final Setting<Integer> mobSpawnerAvoidanceRadius = new Setting<>(16);
 
     /**
@@ -472,6 +520,9 @@ public final class Settings {
      */
     public final Setting<Double> mobAvoidanceCoefficient = new Setting<>(1.5);
 
+    /**
+     * Distance to avoid mobs.
+     */
     public final Setting<Integer> mobAvoidanceRadius = new Setting<>(8);
 
     /**
@@ -622,6 +673,17 @@ public final class Settings {
      */
     public final Setting<Long> slowPathTimeoutMS = new Setting<>(40000L);
 
+
+    /**
+     * allows baritone to save bed waypoints when interacting with beds
+     */
+    public final Setting<Boolean> doBedWaypoints = new Setting<>(true);
+
+    /**
+     * allows baritone to save death waypoints
+     */
+    public final Setting<Boolean> doDeathWaypoints = new Setting<>(true);
+
     /**
      * The big one. Download all chunks in simplified 2-bit format and save them for better very-long-distance pathing.
      */
@@ -637,6 +699,13 @@ public final class Settings {
      * @see <a href="https://github.com/cabaletta/baritone/issues/248">Issue #248</a>
      */
     public final Setting<Boolean> pruneRegionsFromRAM = new Setting<>(true);
+
+    /**
+     * The chunk packer queue can never grow to larger than this, if it does, the oldest chunks are discarded
+     * <p>
+     * The newest chunks are kept, so that if you're moving in a straight line quickly then stop, your immediate render distance is still included
+     */
+    public final Setting<Integer> chunkPackerQueueMaxSize = new Setting<>(2000);
 
     /**
      * Fill in blocks behind you
@@ -738,6 +807,17 @@ public final class Settings {
      * Move without having to force the client-sided rotations
      */
     public final Setting<Boolean> freeLook = new Setting<>(true);
+
+    /**
+     * Break and place blocks without having to force the client-sided rotations. Requires {@link #freeLook}.
+     */
+    public final Setting<Boolean> blockFreeLook = new Setting<>(false);
+
+    /**
+     * When true, the player will remain with its existing look direction as often as possible.
+     * Although, in some cases this can get it stuck, hence this setting to disable that behavior.
+     */
+    public final Setting<Boolean> remainWithExistingLookDirection = new Setting<>(true);
 
     /**
      * Will cause some minor behavioral differences to ensure that Baritone works on anticheats.
@@ -875,10 +955,9 @@ public final class Settings {
     public final Setting<Integer> minYLevelWhileMining = new Setting<>(0);
 
     /**
-     * Sets the maximum y level whilst mining - set to 0 to turn off.
-     * if world has negative y values, subtract the min world height to get the value to put here
+     * Sets the maximum y level to mine ores at.
      */
-    public final Setting<Integer> maxYLevelWhileMining = new Setting<>(0);
+    public final Setting<Integer> maxYLevelWhileMining = new Setting<>(2031);
 
     /**
      * This will only allow baritone to mine exposed ores, can be used to stop ore obfuscators on servers that use them.
@@ -964,7 +1043,7 @@ public final class Settings {
     /**
      * Only build the selected part of schematics
      */
-     public final Setting<Boolean> buildOnlySelection = new Setting<>(false);
+    public final Setting<Boolean> buildOnlySelection = new Setting<>(false);
 
     /**
      * How far to move before repeating the build. 0 to disable repeating on a certain axis, 0,0,0 to disable entirely
@@ -1098,7 +1177,7 @@ public final class Settings {
     /**
      * What Y level to go to for legit strip mining
      */
-    public final Setting<Integer> legitMineYLevel = new Setting<>(11);
+    public final Setting<Integer> legitMineYLevel = new Setting<>(-59);
 
     /**
      * Magically see ores that are separated diagonally from existing ores. Basically like mining around the ores that it finds
@@ -1176,13 +1255,15 @@ public final class Settings {
      * via {@link Consumer#andThen(Consumer)} or it can completely be overriden via setting
      * {@link Setting#value};
      */
-    public final Setting<Consumer<Component>> logger = new Setting<>(Minecraft.getInstance().gui.getChat()::addMessage);
+    @JavaOnly
+    public final Setting<Consumer<Component>> logger = new Setting<>(msg -> Minecraft.getInstance().gui.getChat().addMessage(msg));
 
     /**
      * The function that is called when Baritone will send a desktop notification. This function can be added to
      * via {@link Consumer#andThen(Consumer)} or it can completely be overriden via setting
      * {@link Setting#value};
      */
+    @JavaOnly
     public final Setting<BiConsumer<String, Boolean>> notifier = new Setting<>(NotificationHelper::notify);
 
     /**
@@ -1190,6 +1271,7 @@ public final class Settings {
      * via {@link Consumer#andThen(Consumer)} or it can completely be overriden via setting
      * {@link Setting#value};
      */
+    @JavaOnly
     public final Setting<BiConsumer<Component, Component>> toaster = new Setting<>(BaritoneToast::addOrUpdate);
 
     /**
@@ -1339,6 +1421,7 @@ public final class Settings {
         public T value;
         public final T defaultValue;
         private String name;
+        private boolean javaOnly;
 
         @SuppressWarnings("unchecked")
         private Setting(T value) {
@@ -1347,6 +1430,7 @@ public final class Settings {
             }
             this.value = value;
             this.defaultValue = value;
+            this.javaOnly = false;
         }
 
         /**
@@ -1383,7 +1467,24 @@ public final class Settings {
         public final Type getType() {
             return settingTypes.get(this);
         }
+
+        /**
+         * This should always be the same as whether the setting can be parsed from or serialized to a string; in other
+         * words, the only way to modify it is by writing to {@link #value} programatically.
+         *
+         * @return {@code true} if the setting can not be set or read by the user
+         */
+        public boolean isJavaOnly() {
+            return javaOnly;
+        }
     }
+
+    /**
+     * Marks a {@link Setting} field as being {@link Setting#isJavaOnly() Java-only}
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.FIELD)
+    private @interface JavaOnly {}
 
     // here be dragons
 
@@ -1400,6 +1501,7 @@ public final class Settings {
                     Setting<?> setting = (Setting<?>) field.get(this);
                     String name = field.getName();
                     setting.name = name;
+                    setting.javaOnly = field.isAnnotationPresent(JavaOnly.class);
                     name = name.toLowerCase();
                     if (tmpByName.containsKey(name)) {
                         throw new IllegalStateException("Duplicate setting name");

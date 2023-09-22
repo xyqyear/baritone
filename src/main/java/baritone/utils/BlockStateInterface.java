@@ -22,7 +22,7 @@ import baritone.api.utils.IPlayerContext;
 import baritone.cache.CachedRegion;
 import baritone.cache.WorldData;
 import baritone.utils.accessor.IClientChunkProvider;
-import net.minecraft.client.Minecraft;
+import baritone.utils.pathing.BetterWorldBorder;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
@@ -43,9 +43,10 @@ public class BlockStateInterface {
 
     private final ClientChunkCache provider;
     private final WorldData worldData;
-    protected final BlockGetter world;
+    protected final Level world;
     public final BlockPos.MutableBlockPos isPassableBlockPos;
     public final BlockGetter access;
+    public final BetterWorldBorder worldBorder;
 
     private LevelChunk prev = null;
     private CachedRegion prevCached = null;
@@ -59,19 +60,16 @@ public class BlockStateInterface {
     }
 
     public BlockStateInterface(IPlayerContext ctx, boolean copyLoadedChunks) {
-        this(ctx.world(), (WorldData) ctx.worldData(), copyLoadedChunks);
-    }
-
-    public BlockStateInterface(Level world, WorldData worldData, boolean copyLoadedChunks) {
-        this.world = world;
-        this.worldData = worldData;
+        this.world = ctx.world();
+        this.worldBorder = new BetterWorldBorder(world.getWorldBorder());
+        this.worldData = (WorldData) ctx.worldData();
         if (copyLoadedChunks) {
             this.provider = ((IClientChunkProvider) world.getChunkSource()).createThreadSafeCopy();
         } else {
             this.provider = (ClientChunkCache) world.getChunkSource();
         }
         this.useTheRealWorld = !Baritone.settings().pathThroughCachedOnly.value;
-        if (!Minecraft.getInstance().isSameThread()) {
+        if (!ctx.minecraft().isSameThread()) {
             throw new IllegalStateException();
         }
         this.isPassableBlockPos = new BlockPos.MutableBlockPos();
@@ -97,9 +95,9 @@ public class BlockStateInterface {
     }
 
     public BlockState get0(int x, int y, int z) { // Mickey resigned
-        y -= worldData.dimension.minY();
+        y -= world.dimensionType().minY();
         // Invalid vertical position
-        if (y < 0 || y >= worldData.dimension.height()) {
+        if (y < 0 || y >= world.dimensionType().height()) {
             return AIR;
         }
 

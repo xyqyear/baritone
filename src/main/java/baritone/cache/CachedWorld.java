@@ -25,6 +25,13 @@ import baritone.api.cache.IWorldData;
 import baritone.api.utils.Helper;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.dimension.DimensionType;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,12 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.dimension.DimensionType;
 
 /**
  * @author Brady
@@ -211,7 +212,7 @@ public final class CachedWorld implements ICachedWorld, Helper {
     private BlockPos guessPosition() {
         for (IBaritone ibaritone : BaritoneAPI.getProvider().getAllBaritones()) {
             IWorldData data = ibaritone.getWorldProvider().getCurrentWorld();
-            if (data != null && data.getCachedWorld() == this) {
+            if (data != null && data.getCachedWorld() == this && ibaritone.getPlayerContext().player() != null) {
                 return ibaritone.getPlayerContext().playerFeet();
             }
         }
@@ -309,6 +310,9 @@ public final class CachedWorld implements ICachedWorld, Helper {
                 try {
                     ChunkPos pos = toPackQueue.take();
                     LevelChunk chunk = toPackMap.remove(pos);
+                    if (toPackQueue.size() > Baritone.settings().chunkPackerQueueMaxSize.value) {
+                        continue;
+                    }
                     CachedChunk cached = ChunkPacker.pack(chunk);
                     CachedWorld.this.updateCachedChunk(cached);
                     //System.out.println("Processed chunk at " + chunk.x + "," + chunk.z);
