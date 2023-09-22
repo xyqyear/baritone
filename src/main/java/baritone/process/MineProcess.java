@@ -244,8 +244,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         return block.getX() >= squareCenter.getX() - squareRadius &&
                 block.getX() <= squareCenter.getX() + squareRadius &&
                 block.getZ() >= squareCenter.getZ() - squareRadius &&
-                block.getZ() <= squareCenter.getZ() + squareRadius &&
-                block.getY() <= (Baritone.settings().maxYLevelWhileMining.value + Baritone.settings().blockReachDistance.value);
+                block.getZ() <= squareCenter.getZ() + squareRadius;
     }
 
 
@@ -559,9 +558,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                     }
                 })
 
-                .filter(pos -> pos.getY() >= Baritone.settings().minYLevelWhileMining.value + ctx.world.dimensionType().minY())
-                .filter(pos -> pos.getY() <= Baritone.settings().maxYLevelWhileMining.value + ctx.world.dimensionType().minY())
-
+                .filter(pos -> pos.getY() >= Baritone.settings().minYLevelWhileMining.value)
                 .filter(pos -> pos.getY() <= Baritone.settings().maxYLevelWhileMining.value)
 
                 .filter(pos -> !blacklist.contains(pos))
