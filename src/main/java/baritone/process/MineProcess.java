@@ -68,7 +68,6 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
     private int desiredQuantity;
     private int tickCount;
     private int tickCountForRightClick;
-    private BlockPos currentlyMiningBlockPos;
     private HypixelHelper.World world;
     private int worldChangedTicks;
     private AbstractMap.SimpleEntry<BlockPos, Integer> currentRubySpot;
@@ -203,10 +202,10 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 return null;
             }
         }
+
         Optional<BlockPos> shaft = curr.stream()
                 .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
                 .min(Comparator.comparingDouble(new BlockPos(ctx.playerHead())::distSqr));
-
 
         // ----------------- right click every n ticks -----------------
         int rightClickEvery = Baritone.settings().rightClickEvery.value;
@@ -222,8 +221,6 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
             if (!MovementHelper.avoidBreaking(baritone.bsi, pos.getX(), pos.getY(), pos.getZ(), state)) {
                 Optional<Rotation> rot = RotationUtils.reachable(ctx, pos);
                 if (rot.isPresent() && isSafeToCancel) {
-                    // we only update currentlyMiningBlockPos when the block is reachable
-                    currentlyMiningBlockPos = pos;
                     baritone.getLookBehavior().updateTarget(rot.get(), true);
                     MovementHelper.switchToBestToolFor(ctx, ctx.world().getBlockState(pos));
                     if (ctx.isLookingAt(pos) || ctx.playerRotations().isReallyCloseTo(rot.get())) {
