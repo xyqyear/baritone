@@ -240,11 +240,12 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         return command;
     }
 
-    private static boolean blockInCube(Vec3i block, Vec3i cubeCenter, int cubeRadius) {
-        return block.getX() >= cubeCenter.getX() - cubeRadius &&
-                block.getX() <= cubeCenter.getX() + cubeRadius &&
-                block.getZ() >= cubeCenter.getZ() - cubeRadius &&
-                block.getZ() <= cubeCenter.getZ() + cubeRadius;
+    private static boolean blockInSquare(Vec3i block, Vec3i squareCenter, int squareRadius) {
+        return block.getX() >= squareCenter.getX() - squareRadius &&
+                block.getX() <= squareCenter.getX() + squareRadius &&
+                block.getZ() >= squareCenter.getZ() - squareRadius &&
+                block.getZ() <= squareCenter.getZ() + squareRadius &&
+                block.getY() <= (Baritone.settings().maxYLevelWhileMining.value + Baritone.settings().blockReachDistance.value);
     }
 
 
@@ -336,7 +337,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         List<BlockPos> dropped = droppedItemsScan();
         List<BlockPos> locs = searchWorld(context, filter, Baritone.settings().oreLocationScanCount.value, already, blacklist, dropped);
         if (Baritone.settings().gemstoneMode.value) {
-            locs.removeIf(pos -> !blockInCube(pos, currentRubySpot.getKey(), currentRubySpot.getValue()));
+            locs.removeIf(pos -> !blockInSquare(pos, currentRubySpot.getKey(), currentRubySpot.getValue()));
         }
         locs.addAll(dropped);
         if (locs.isEmpty() && !Baritone.settings().exploreForBlocks.value) {
