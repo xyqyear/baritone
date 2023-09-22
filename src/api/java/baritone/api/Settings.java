@@ -220,21 +220,6 @@ public final class Settings {
     public final Setting<Integer> rightClickEvery = new Setting<>(0);
 
     /**
-     * hold left click while mining
-     */
-    public final Setting<Boolean> holdLeftClickWhileMining = new Setting<>(false);
-
-    /**
-     * If turned on, the player won't move while mining
-     */
-    public final Setting<Boolean> allowMoveWhileMining = new Setting<>(true);
-
-    /**
-     * If turned on, the player will sneak while mining
-     */
-    public final Setting<Boolean> sneakWhileMining = new Setting<>(false);
-
-    /**
      * affecting all sorts of behaviors in favor of gemstone mining
      */
     public final Setting<Integer> oreLocationScanCount = new Setting<>(64);
