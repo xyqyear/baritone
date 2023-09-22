@@ -216,17 +216,6 @@ public final class Settings {
     ));
 
     /**
-     * Enable smooth aim while mining/building. Aim is updated per tick (20 = 1 second)
-     * set to 1 to disable.
-     */
-    public final Setting<Float> smoothAim = new Setting<>(1f);
-
-    /**
-     * Additional angle the camera will move after camera moving
-     */
-    public final Setting<Float> smoothAimAdditionalAngle = new Setting<>(1f);
-
-    /**
      * Right click every x ticks, put 0 for not clicking
      */
     public final Setting<Integer> rightClickEvery = new Setting<>(0);
