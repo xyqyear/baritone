@@ -616,7 +616,6 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         this.branchPoint = null;
         this.branchPointRunaway = null;
         this.anticipatedDrops = new HashMap<>();
-        this.currentlyMiningBlockPos = null;
         if (Baritone.settings().gemstoneMode.value) {
             this.world = HypixelHelper.World.SKYBLOCK_CRYSTAL_HOLLOWS;
         } else {
