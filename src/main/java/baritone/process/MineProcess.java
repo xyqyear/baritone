@@ -103,7 +103,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                             break;
                         }
                         int fuelValue = fuel.get();
-                        if (fuelValue == 0 || fuelValue >= leastFuel) {
+                        if (fuelValue < 20 || fuelValue >= leastFuel) {
                             break;
                         }
                         leastFuel = fuelValue;
@@ -112,7 +112,9 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                 }
             }
 
-            leastFuelSlot.ifPresent(integer -> ctx.player().getInventory().selected = integer);
+            leastFuelSlot.ifPresent(integer -> {
+                ctx.player().getInventory().selected = integer;
+            });
         }
 
         // ----------------- disconnect when not in crystal hollows -----------------
