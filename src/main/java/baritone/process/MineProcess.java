@@ -99,7 +99,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
                             break;
                         }
                         int fuelValue = fuel.get();
-                        if (fuelValue < 20 || fuelValue >= leastFuel) {
+                        if (fuelValue < 500 || fuelValue >= leastFuel) {
                             break;
                         }
                         leastFuel = fuelValue;
