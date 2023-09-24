@@ -112,7 +112,7 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     @Override
     public void onReceivePacket(PacketEvent event) {
         if (event.getState() == EventState.POST && event.getPacket() instanceof ClientboundChatPacket packet) {
-            if (packet.getMessage().getString().startsWith("Your pass to the Crystal Hollows will expire")) {
+            if (packet.getMessage().getString().contains("Click to buy a new pass for")) {
                 ctx.player().chat("/purchasecrystallhollowspass");
             }
         }
